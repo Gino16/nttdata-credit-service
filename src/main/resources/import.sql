@@ -1,0 +1,1 @@
+INSERT INTO credit_card_types(name) VALUES ('personal'), ('empresarial');
