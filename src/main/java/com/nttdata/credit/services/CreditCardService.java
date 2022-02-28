@@ -1,11 +1,14 @@
 package com.nttdata.credit.services;
 
 import com.nttdata.credit.entities.CreditCard;
-import com.nttdata.credit.entities.CreditCardType;
+import com.nttdata.credit.entities.Customer;
 
 import java.util.List;
 
 public interface CreditCardService {
+
+    public Customer findOneCustomerById(Long id);
+
     public List<CreditCard> findAll();
 
     public CreditCard findOneById(Long id);
@@ -16,5 +19,5 @@ public interface CreditCardService {
 
     public void delete(Long id);
 
-    public List<CreditCardType> findAllCreditCardTypes();
+    public List<CreditCard> findCreditCardsByIdCustomer(Long id);
 }

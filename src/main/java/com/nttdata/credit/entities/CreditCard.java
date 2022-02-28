@@ -20,9 +20,7 @@ public class CreditCard {
 
     private String number;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JsonIgnoreProperties(value = {"applications", "hibernateLazyInitializer"})
-    private CreditCardType creditCardType;
+    private String creditCardType;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JsonIgnoreProperties(value = {"applications", "hibernateLazyInitializer"})
