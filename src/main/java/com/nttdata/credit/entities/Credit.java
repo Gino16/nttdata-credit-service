@@ -1,5 +1,6 @@
 package com.nttdata.credit.entities;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -22,4 +23,14 @@ public class Credit {
 
     @Column(name = "limit_used")
     private Long amountUsed;
+
+    @Column(name = "amount_paid")
+    private Long amountPaid;
+
+    private Long balance;
+
+    public void updateBalance(){
+        this.balance = this.limitAmount - this.amountUsed;
+    }
+
 }

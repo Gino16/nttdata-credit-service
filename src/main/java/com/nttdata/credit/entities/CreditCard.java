@@ -30,4 +30,22 @@ public class CreditCard {
 
     @Transient
     private Customer customer;
+
+    public void pay(Long quantity){
+        Long amountPaid = this.credit.getAmountPaid();
+        Long amountUsed = this.credit.getAmountUsed();
+        amountPaid += quantity;
+        amountUsed -= quantity;
+
+        this.credit.setAmountUsed(amountUsed);
+        this.credit.setAmountPaid(amountPaid);
+        this.credit.updateBalance();
+    }
+
+    public void consume(Long quantity){
+        Long amountUsed = this.credit.getAmountUsed();
+        amountUsed += quantity;
+        this.credit.setAmountUsed(amountUsed);
+        this.credit.updateBalance();
+    }
 }

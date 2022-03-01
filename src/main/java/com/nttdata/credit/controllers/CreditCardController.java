@@ -11,9 +11,10 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 import java.util.Objects;
+import java.util.stream.Collectors;
 
 @Controller
-@RequestMapping("/creditcards")
+@RequestMapping("/credit-cards")
 public class CreditCardController {
     @Autowired
     private CreditCardService creditCardService;
@@ -70,6 +71,53 @@ public class CreditCardController {
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void delete(@PathVariable Long id) {
         creditCardService.delete(id);
+    }
+
+
+    @GetMapping("/customer/{id}/account/{idAccount}/transaction/{transaction}/{quantity}")
+    public ResponseEntity<?> transaction(@PathVariable Long id, @PathVariable Long idAccount, @PathVariable Long transaction, @PathVariable Long quantity) {
+
+        // transaction -> 1 = pay, 2 = consume
+
+        Customer customer = creditCardService.findOneCustomerById(id);
+        if (customer == null) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).build();
+        }
+
+        List<CreditCard> creditCards = creditCardService.findCreditCardsByIdCustomer(customer.getId());
+
+        if (creditCards == null) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).build();
+        }
+
+        List<CreditCard> creditCardOwners = creditCards.stream().filter((creditCard) -> Objects.equals(creditCard.getId(), idAccount)).collect(Collectors.toList());
+
+
+        if (creditCardOwners.isEmpty()) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).build();
+        }
+
+        CreditCard card = creditCardOwners.get(0);
+
+        if (transaction == 1){
+            if (quantity <= card.getCredit().getAmountUsed()){
+                card.pay(quantity);
+            } else {
+                return ResponseEntity.status(HttpStatus.CONFLICT).build();
+            }
+        } else if (transaction == 2){
+            if (card.getCredit().getAmountUsed() + quantity <= card.getCredit().getLimitAmount()){
+                card.consume(quantity);
+            } else {
+                return ResponseEntity.status(HttpStatus.CONFLICT).build();
+            }
+        } else {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).build();
+        }
+
+        creditCardService.create(card);
+
+        return ResponseEntity.ok(card);
     }
 
 }
