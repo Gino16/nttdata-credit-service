@@ -1,14 +1,17 @@
 package com.nttdata.credit.controllers;
 
 import com.nttdata.credit.entities.CreditCard;
+import com.nttdata.credit.entities.CreditTransaction;
 import com.nttdata.credit.entities.Customer;
 import com.nttdata.credit.services.CreditCardService;
+import com.nttdata.credit.services.CreditTransactionService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.Date;
 import java.util.List;
 import java.util.Objects;
 import java.util.stream.Collectors;
@@ -18,6 +21,9 @@ import java.util.stream.Collectors;
 public class CreditCardController {
     @Autowired
     private CreditCardService creditCardService;
+
+    @Autowired
+    private CreditTransactionService creditTransactionService;
 
     @GetMapping("/")
     public ResponseEntity<List<CreditCard>> findAll() {
@@ -75,7 +81,7 @@ public class CreditCardController {
 
 
     @GetMapping("/customer/{id}/account/{idAccount}/transaction/{transaction}/{quantity}")
-    public ResponseEntity<?> transaction(@PathVariable Long id, @PathVariable Long idAccount, @PathVariable Long transaction, @PathVariable Long quantity) {
+    public ResponseEntity<?> transaction(@PathVariable Long id, @PathVariable Long idAccount, @PathVariable Long transaction, @PathVariable Double quantity) {
 
         // transaction -> 1 = pay, 2 = consume
 
@@ -99,14 +105,16 @@ public class CreditCardController {
 
         CreditCard card = creditCardOwners.get(0);
 
-        if (transaction == 1){
-            if (quantity <= card.getCredit().getAmountUsed()){
+        // Si es pago
+        if (transaction == 1) {
+            if (quantity <= card.getCredit().getAmountUsed()) {
                 card.pay(quantity);
             } else {
                 return ResponseEntity.status(HttpStatus.CONFLICT).build();
             }
-        } else if (transaction == 2){
-            if (card.getCredit().getAmountUsed() + quantity <= card.getCredit().getLimitAmount()){
+            // Si es consumo del credito
+        } else if (transaction == 2) {
+            if (card.getCredit().getAmountUsed() + quantity <= card.getCredit().getLimitAmount()) {
                 card.consume(quantity);
             } else {
                 return ResponseEntity.status(HttpStatus.CONFLICT).build();
@@ -115,9 +123,30 @@ public class CreditCardController {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).build();
         }
 
+        // registro de movimiento
+        CreditTransaction creditTransaction = new CreditTransaction();
+        creditTransaction.setConcept(transaction == 1 ? "Payment" : "Consume");
+        creditTransaction.setAmount(quantity);
+        creditTransaction.setDate(new Date());
+        creditTransaction.setCredit(card.getCredit());
+
+
         creditCardService.create(card);
+        creditTransactionService.save(creditTransaction);
 
         return ResponseEntity.ok(card);
+    }
+
+    @GetMapping("/history/credit-card/{idDebitCard}")
+    public ResponseEntity<List<CreditTransaction>> history(@PathVariable Long idDebitCard) {
+        CreditCard creditCard = this.creditCardService.findOneById(idDebitCard);
+        if (creditCard == null) {
+            return ResponseEntity.badRequest().build();
+        }
+
+        List<CreditTransaction> creditTransactions = this.creditTransactionService.findAllByCreditId(creditCard.getCredit().getId());
+
+        return ResponseEntity.ok(creditTransactions);
     }
 
 }

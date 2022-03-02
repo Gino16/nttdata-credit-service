@@ -34,8 +34,8 @@ public class CreditController {
 
     @PostMapping("/")
     public ResponseEntity<Credit> create(@RequestBody Credit credit){
-        credit.setAmountUsed(0L);
-        credit.setAmountPaid(0L);
+        credit.setAmountUsed(0.0);
+        credit.setAmountPaid(0.0);
         credit.updateBalance();
         return new ResponseEntity<>(creditService.create(credit), HttpStatus.CREATED);
     }

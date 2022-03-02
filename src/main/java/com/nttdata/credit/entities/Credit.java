@@ -19,18 +19,18 @@ public class Credit {
     private Long id;
 
     @Column(name = "limit_amount")
-    private Long limitAmount;
+    private Double limitAmount;
 
     @Column(name = "limit_used")
-    private Long amountUsed;
+    private Double amountUsed;
 
     @Column(name = "amount_paid")
-    private Long amountPaid;
+    private Double amountPaid;
 
-    private Long balance;
+    private Double currentBalance;
 
     public void updateBalance(){
-        this.balance = this.limitAmount - this.amountUsed;
+        this.currentBalance = this.limitAmount - this.amountUsed;
     }
 
 }
