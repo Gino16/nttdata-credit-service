@@ -20,12 +20,14 @@ public class CreditCard {
 
     private String number;
 
+    @Column(name = "credit_card_type")
     private String creditCardType;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JsonIgnoreProperties(value = {"applications", "hibernateLazyInitializer"})
     private Credit credit;
 
+    @Transient
     private Long idCustomer;
 
     @Transient

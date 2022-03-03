@@ -27,6 +27,7 @@ public class Credit {
     @Column(name = "amount_paid")
     private Double amountPaid;
 
+    @Column(name = "current_balance")
     private Double currentBalance;
 
     public void updateBalance(){
