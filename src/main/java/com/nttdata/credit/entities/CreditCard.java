@@ -27,7 +27,6 @@ public class CreditCard {
     @JsonIgnoreProperties(value = {"applications", "hibernateLazyInitializer"})
     private Credit credit;
 
-    @Transient
     private Long idCustomer;
 
     @Transient
