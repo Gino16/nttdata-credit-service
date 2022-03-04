@@ -47,24 +47,28 @@ public class CreditCardController {
     @PostMapping("/")
     public ResponseEntity<CreditCard> create(@RequestBody CreditCard creditCard) {
 
-        Customer customer = creditCardService.findOneCustomerById(creditCard.getIdCustomer());
+        try {
+            Customer customer = creditCardService.findOneCustomerById(creditCard.getIdCustomer());
 
-        if (customer == null) {
+            if (customer == null) {
+                return ResponseEntity.badRequest().build();
+            }
+
+            // Validate if a Credit Card is going to be assigning to a Personal Customer
+            if (Objects.equals(customer.getCustomerType().getName(), "Personal")) {
+                List<CreditCard> creditCardList = creditCardService.findCreditCardsByIdCustomer(creditCard.getIdCustomer());
+
+                if (!creditCardList.isEmpty()) {
+                    return ResponseEntity.status(HttpStatus.BAD_REQUEST).build();
+                }
+            }
+            creditCard.setCreditCardType(customer.getCustomerType().getName());
+
+            CreditCard newCreditCard1 = creditCardService.create(creditCard);
+            return new ResponseEntity<>(newCreditCard1, HttpStatus.CREATED);
+        } catch (Exception e){
             return ResponseEntity.badRequest().build();
         }
-
-        // Validate if a Credit Card is going to be assigning to a Personal Customer
-        if (Objects.equals(customer.getCustomerType().getName(), "Personal")) {
-            List<CreditCard> creditCardList = creditCardService.findCreditCardsByIdCustomer(creditCard.getIdCustomer());
-
-            if (!creditCardList.isEmpty()) {
-                return ResponseEntity.status(HttpStatus.BAD_REQUEST).build();
-            }
-        }
-        creditCard.setCreditCardType(customer.getCustomerType().getName());
-
-        CreditCard newCreditCard1 = creditCardService.create(creditCard);
-        return new ResponseEntity<>(newCreditCard1, HttpStatus.CREATED);
     }
 
     // Update data of a Credit Card
@@ -88,61 +92,65 @@ public class CreditCardController {
     @GetMapping("/customer/{id}/id-card/{idCreditCard}/transaction/{transaction}/quantity/{quantity}")
     public ResponseEntity<?> transaction(@PathVariable Long id, @PathVariable Long idCreditCard, @PathVariable Long transaction, @PathVariable Double quantity) {
 
-        // Validate if customer exists
-        Customer customer = creditCardService.findOneCustomerById(id);
-        if (customer == null) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).build();
-        }
-
-        // Get All Credit Cards of customer
-        List<CreditCard> creditCards = creditCardService.findCreditCardsByIdCustomer(customer.getId());
-
-        // Validate if exist credit cards of customer
-        if (creditCards == null) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).build();
-        }
-
-        // Get the specific Credit Card to make the transaction
-        List<CreditCard> creditCardOwners = creditCards.stream().filter((creditCard) -> Objects.equals(creditCard.getId(), idCreditCard)).collect(Collectors.toList());
-
-        // Validate if exist that credit card
-        if (creditCardOwners.isEmpty()) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).build();
-        }
-
-        // Getting the credit card
-        CreditCard card = creditCardOwners.get(0);
-
-        // Verify if its payment
-        if (transaction == 1) {
-            if (quantity <= card.getCredit().getAmountUsed()) {
-                card.pay(quantity);
-            } else {
-                return ResponseEntity.status(HttpStatus.CONFLICT).build();
+        try{
+            // Validate if customer exists
+            Customer customer = creditCardService.findOneCustomerById(id);
+            if (customer == null) {
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST).build();
             }
-            // Verify if its consume
-        } else if (transaction == 2) {
-            if (card.getCredit().getAmountUsed() + quantity <= card.getCredit().getLimitAmount()) {
-                card.consume(quantity);
-            } else {
-                return ResponseEntity.status(HttpStatus.CONFLICT).build();
+
+            // Get All Credit Cards of customer
+            List<CreditCard> creditCards = creditCardService.findCreditCardsByIdCustomer(customer.getId());
+
+            // Validate if exist credit cards of customer
+            if (creditCards == null) {
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST).build();
             }
-        } else {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).build();
+
+            // Get the specific Credit Card to make the transaction
+            List<CreditCard> creditCardOwners = creditCards.stream().filter((creditCard) -> Objects.equals(creditCard.getId(), idCreditCard)).collect(Collectors.toList());
+
+            // Validate if exist that credit card
+            if (creditCardOwners.isEmpty()) {
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST).build();
+            }
+
+            // Getting the credit card
+            CreditCard card = creditCardOwners.get(0);
+
+            // Verify if its payment
+            if (transaction == 1) {
+                if (quantity <= card.getCredit().getAmountUsed()) {
+                    card.pay(quantity);
+                } else {
+                    return ResponseEntity.status(HttpStatus.CONFLICT).build();
+                }
+                // Verify if its consume
+            } else if (transaction == 2) {
+                if (card.getCredit().getAmountUsed() + quantity <= card.getCredit().getLimitAmount()) {
+                    card.consume(quantity);
+                } else {
+                    return ResponseEntity.status(HttpStatus.CONFLICT).build();
+                }
+            } else {
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST).build();
+            }
+
+            // Save History
+            CreditTransaction creditTransaction = new CreditTransaction();
+            creditTransaction.setConcept(transaction == 1 ? "Payment" : "Consume");
+            creditTransaction.setAmount(quantity);
+            creditTransaction.setDate(new Date());
+            creditTransaction.setCredit(card.getCredit());
+
+
+            creditCardService.create(card);
+            creditTransactionService.save(creditTransaction);
+
+            return ResponseEntity.ok(card);
+        } catch (Exception e){
+            return ResponseEntity.badRequest().build();
         }
-
-        // Save History
-        CreditTransaction creditTransaction = new CreditTransaction();
-        creditTransaction.setConcept(transaction == 1 ? "Payment" : "Consume");
-        creditTransaction.setAmount(quantity);
-        creditTransaction.setDate(new Date());
-        creditTransaction.setCredit(card.getCredit());
-
-
-        creditCardService.create(card);
-        creditTransactionService.save(creditTransaction);
-
-        return ResponseEntity.ok(card);
     }
 
     // Get History of a credit card

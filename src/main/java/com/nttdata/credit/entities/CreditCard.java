@@ -23,6 +23,7 @@ public class CreditCard {
     @Column(name = "credit_card_type")
     private String creditCardType;
 
+    @JoinColumn(unique = true)
     @ManyToOne(fetch = FetchType.LAZY)
     @JsonIgnoreProperties(value = {"applications", "hibernateLazyInitializer"})
     private Credit credit;
